@@ -14,7 +14,7 @@ dotenv.config();
 const app = express();
 
 // ✅ Use env port
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.DB_PORT || 5000;
 
 // ✅ Use JWT secret from env
 const JWT_SECRET = process.env.JWT_SECRET;
