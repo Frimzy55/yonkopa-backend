@@ -35,7 +35,7 @@ const db = mysql.createConnection({
 //const db = mysql.createConnection(process.env.MYSQL_URL);
 
 db.connect(err => {
-  if (err) console.error('❌ Database connection failed:', err);
+  if (err) console.error('❌ Database connection failed error:', err);
   else console.log('✅ Connected to MySQL database');
 });
 
