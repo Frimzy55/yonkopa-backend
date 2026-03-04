@@ -5,6 +5,10 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import jwt from 'jsonwebtoken';
 
+
+import dotenv from 'dotenv';   // ✅ ADD THIS
+import kycRoutes from "./routes/kycRoutes.js";
+
 const app = express();
 const PORT = 5000;
 
@@ -27,7 +31,12 @@ db.connect(err => {
   else console.log('✅ Connected to MySQL database');
 });
 
-// --- SIGNUP ENDPOINT ---
+
+
+
+
+
+
 app.post('/signup', async (req, res) => {
   const { fullName, email, phone, password, confirmPassword, role } = req.body;
 
@@ -52,6 +61,36 @@ app.post('/signup', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+
+
+// Signup admin endpoint
+app.post('/signup1', async (req, res) => {
+  const { full_name, email, phone, password, role } = req.body;
+
+  if (!full_name || !email || !phone || !password || !role) {
+    return res.status(400).json({ message: 'All fields are required' });
+  }
+
+  try {
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Insert into MySQL
+    const query = `INSERT INTO users (full_name, email, phone, password, role, created_at) VALUES (?, ?, ?, ?, ?, NOW())`;
+    db.query(query, [full_name, email, phone, hashedPassword, role], (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ message: 'Database error' });
+      }
+      res.status(200).json({ message: 'User registered successfully!' });
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 
 // --- LOGIN ENDPOINT ---
 app.post('/login', (req, res) => {
@@ -135,6 +174,379 @@ app.get('/loan/management', authenticateToken, authorizeRoles('loan_officer', 'a
   res.json({ message: 'Loan management area accessed successfully.' });
 });
 
-app.listen(PORT, () =>
-  console.log(`🚀 Server running on http://localhost:${PORT}`)
-);
+
+
+
+//app.use("/uploads", express.static("uploads"));
+
+//app.use("/api/kyc", kycRoutes);
+
+//app.use("/api/loan", loanRoutes);
+
+
+
+
+
+
+/*app.post("/api/verify-customer", async (req, res) => {
+  const { phone, kycCode } = req.body;
+
+  const query = "SELECT * FROM customers_kyc WHERE mobileNumber = ? AND kyc_code = ?";
+  db.query(query, [phone, kycCode], (err, results) => {
+    if (err) return res.status(500).json({ error: "Database error" });
+
+    if (results.length > 0) {
+      return res.json({ verified: true });
+    } else {
+      return res.json({ verified: false });
+    }
+  });
+});*/
+
+
+
+
+
+app.post("/api/verify-customer", (req, res) => {
+  const { phone, kycCode } = req.body;
+
+  const query = `
+    SELECT 
+      id,
+      kyc_code,
+      firstName,
+      lastName,
+      email,
+      mobileNumber,
+      dateOfBirth
+    FROM customers_kyc
+    WHERE mobileNumber = ? AND kyc_code = ?
+  `;
+
+  db.query(query, [phone, kycCode], (err, results) => {
+    if (err) {
+      console.error("Verify customer error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+
+    if (results.length === 0) {
+      return res.json({ verified: false });
+    }
+
+    res.json({
+      verified: true,
+      customer: results[0]
+    });
+  });
+});
+
+
+
+
+
+
+
+
+
+
+
+
+app.get("/users", (req, res) => {
+  const sql = "SELECT id, full_name, email, phone, role, created_at FROM users";
+  db.query(sql, (err, results) => {
+    if (err) return res.status(500).json(err);
+    res.json(results);
+  });
+});
+
+// GET single user by ID (optional)
+app.get("/users/:id", (req, res) => {
+  const { id } = req.params;
+  const sql = "SELECT id, full_name, email, phone, role, created_at FROM users WHERE id = ?";
+  db.query(sql, [id], (err, results) => {
+    if (err) return res.status(500).json(err);
+    res.json(results[0]);
+  });
+});
+
+// CREATE user
+app.post("/users", async (req, res) => {
+  const { full_name, email, phone, password, role } = req.body;
+
+  // Hash password
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  const sql = "INSERT INTO users (full_name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)";
+  db.query(sql, [full_name, email, phone, hashedPassword, role], (err, results) => {
+    if (err) return res.status(500).json(err);
+    res.json({ message: "User created", id: results.insertId });
+  });
+});
+
+// UPDATE user
+app.put("/users/:id", async (req, res) => {
+  const { id } = req.params;
+  const { full_name, email, phone, password, role } = req.body;
+
+  let sql, params;
+  if (password) {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    sql = "UPDATE users SET full_name=?, email=?, phone=?, password=?, role=? WHERE id=?";
+    params = [full_name, email, phone, hashedPassword, role, id];
+  } else {
+    sql = "UPDATE users SET full_name=?, email=?, phone=?, role=? WHERE id=?";
+    params = [full_name, email, phone, role, id];
+  }
+
+  db.query(sql, params, (err, results) => {
+    if (err) return res.status(500).json(err);
+    res.json({ message: "User updated" });
+  });
+});
+
+// DELETE user
+app.delete("/users/:id", (req, res) => {
+  const { id } = req.params;
+  const sql = "DELETE FROM users WHERE id=?";
+  db.query(sql, [id], (err, results) => {
+    if (err) return res.status(500).json(err);
+    res.json({ message: "User deleted" });
+  });
+});
+
+
+
+
+
+
+
+// GET all users with optional search
+app.get("/userss", (req, res) => {
+  const { search } = req.query;
+  let sql = "SELECT id, full_name, email, phone, role, created_at FROM users";
+
+  if (search) {
+    sql += " WHERE full_name LIKE ? OR role LIKE ?";
+    const searchTerm = `%${search}%`;
+    db.query(sql, [searchTerm, searchTerm], (err, results) => {
+      if (err) return res.status(500).json(err);
+      res.json(results);
+    });
+  } else {
+    db.query(sql, (err, results) => {
+      if (err) return res.status(500).json(err);
+      res.json(results);
+    });
+  }
+});
+
+
+
+
+
+
+app.get("/api/customers/search", (req, res) => {
+  const { q } = req.query;
+
+  const sql = `
+    SELECT * FROM users 
+    WHERE role = 'customer'
+    AND (
+      full_name LIKE ? 
+      OR phone LIKE ? 
+      OR id LIKE ?
+    )
+  `;
+
+  const param = `%${q}%`;
+
+  db.query(sql, [param, param, param], (err, results) => {
+    if (err) return res.status(500).json({ error: err });
+    res.json(results);
+  });
+});
+
+
+
+
+
+// GET pending loan applications (async/await)
+// GET pending loan applications (CALLBACK STYLE – CORRECT)
+app.get('/api/loan-applications/pending', (req, res) => {
+  const sql = `
+    SELECT 
+      id,
+      kycCode,
+      fullName,
+      loanType,
+      loanAmount,
+      createdAt,
+      phone,
+      
+      'pending' AS status
+    FROM loans
+    ORDER BY createdAt DESC
+  `;
+
+  db.query(sql, (err, rows) => {
+    if (err) {
+      console.error('Error fetching applications:', err);
+      return res.status(500).json({ message: 'Error fetching applications' });
+    }
+
+    res.json(rows);
+  });
+});
+
+
+app.use("/uploads", express.static("uploads"));
+
+app.use("/api/kyc", kycRoutes);
+
+//app.use("/api/loan", loanRoutes);
+
+
+
+
+
+
+app.post("/api/loan/apply-loan", (req, res) => {
+  const formData = { ...req.body };
+
+  // List of allowed columns in loans table
+  const allowedFields = [
+    "kycCode","fullName","phone","email","dob","gender","nationalId","maritalStatus","dependents",
+    "residentialAddress","residentialGPS","loanType","employerName","jobTitle",
+    "monthlySalary","businessName","businessType","businessRegNo","businessAddress",
+    "businessRevenue","yearsInBusiness","loanAmount","loanPurpose","loanTerm",
+    "repaymentFrequency","guarantorName","guarantorPhone","guarantorAddress",
+    "guarantorRelationship","guarantorNationality","guarantorGender","guarantorDOB"
+  ];
+
+  // Remove unknown fields
+  for (const key in formData) {
+    if (!allowedFields.includes(key)) delete formData[key];
+  }
+
+  // Convert empty strings to null
+  for (const key in formData) {
+    if (formData[key] === "") formData[key] = null;
+  }
+
+  // Insert into MySQL
+  const query = "INSERT INTO loans SET ?";
+  db.query(query, formData, (err, result) => {
+    if (err) {
+      console.error("MySQL Insert Error:", err);
+      return res.status(500).json({ success: false, message: "DB error" });
+    }
+    res.json({ success: true, id: result.insertId });
+  });
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// API endpoint to save applicant profile
+app.post('/api/applications/save-profile', (req, res) => {
+  const { loanId, customerId, applicantName, contactNumber, creditOfficer, loanType, loanAmount, applicationDate } = req.body;
+
+  const sql = `
+    INSERT INTO applicant_profiles 
+    (loanId, customerId, applicantName, contactNumber, creditOfficer, loanType, loanAmount, applicationDate)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ON DUPLICATE KEY UPDATE
+      applicantName = VALUES(applicantName),
+      contactNumber = VALUES(contactNumber),
+      creditOfficer = VALUES(creditOfficer),
+      loanType = VALUES(loanType),
+      loanAmount = VALUES(loanAmount),
+      applicationDate = VALUES(applicationDate)
+  `;
+
+  db.query(
+    sql,
+    [loanId, customerId, applicantName, contactNumber, creditOfficer, loanType, loanAmount, applicationDate],
+    (err, result) => {
+      if (err) return res.status(500).json({ message: err.message });
+      res.json({ message: 'Profile saved successfully', result });
+    }
+  );
+});
+
+//app.listen(5000, () => console.log('Server running on port 5000'));
+
+
+
+
+
+
+
+// Simple route to save collateral (no MVC)
+app.post('/api/collateral/save', (req, res) => {
+  const data = req.body;
+
+  const sql = `
+    INSERT INTO collateral_details
+    (loanId, lendingType, collateralType,
+     landLocation, landSize, landValue,
+     vehicleMake, vehicleModel, vehicleValue,
+     buildingType, buildingSize, buildingValue,
+     bankName, accountNumber, depositAmount)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON DUPLICATE KEY UPDATE
+      lendingType=VALUES(lendingType),
+      collateralType=VALUES(collateralType),
+      landLocation=VALUES(landLocation),
+      landSize=VALUES(landSize),
+      landValue=VALUES(landValue),
+      vehicleMake=VALUES(vehicleMake),
+      vehicleModel=VALUES(vehicleModel),
+      vehicleValue=VALUES(vehicleValue),
+      buildingType=VALUES(buildingType),
+      buildingSize=VALUES(buildingSize),
+      buildingValue=VALUES(buildingValue),
+      bankName=VALUES(bankName),
+      accountNumber=VALUES(accountNumber),
+      depositAmount=VALUES(depositAmount)
+  `;
+
+  db.query(sql, [
+    data.loanId, data.lendingType, data.collateralType,
+    data.landLocation || null, data.landSize || null, data.landValue || null,
+    data.vehicleMake || null, data.vehicleModel || null, data.vehicleValue || null,
+    data.buildingType || null, data.buildingSize || null, data.buildingValue || null,
+    data.bankName || null, data.accountNumber || null, data.depositAmount || null
+  ], (err, result) => {
+    if (err) {
+      console.error('Error saving collateral:', err);
+      return res.status(500).json({ message: 'Failed to save collateral', error: err });
+    }
+    res.json({ message: 'Collateral saved successfully', result });
+  });
+});
+
+
+
+
+
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
