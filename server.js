@@ -181,9 +181,9 @@ app.get('/loan/management', authenticateToken, authorizeRoles('loan_officer', 'a
 
 
 
-//app.use("/uploads", express.static("uploads"));
+app.use("/uploads", express.static("uploads"));
 
-//app.use("/api/kyc", kycRoutes);
+app.use("/api/kyc", kycRoutes);
 
 //app.use("/api/loan", loanRoutes);
 
