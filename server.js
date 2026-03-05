@@ -87,25 +87,56 @@ db.getConnection((err, connection) => {
 app.post('/signup', async (req, res) => {
   const { fullName, email, phone, password, confirmPassword, role } = req.body;
 
-  if (password !== confirmPassword)
+  if (password !== confirmPassword) {
     return res.status(400).json({ message: 'Passwords do not match' });
+  }
 
   try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const userRole = role || 'customer'; // defaults to 'customer'
 
-    const sql =
-      'INSERT INTO users (full_name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)';
-    db.query(sql, [fullName, email, phone, hashedPassword, userRole], (err) => {
+    // 1️⃣ Check if email already exists
+    const checkUserSql = "SELECT * FROM users WHERE email = ?";
+
+    db.query(checkUserSql, [email], async (err, results) => {
       if (err) {
-        console.error('Database error:', err);
-        return res.status(500).json({ message: 'Error creating account' });
+        console.error("Database error:", err);
+        return res.status(500).json({ message: "Database error" });
       }
-      res.status(201).json({ message: 'Account created successfully!', role: userRole });
+
+      if (results.length > 0) {
+        return res.status(400).json({
+          message: "Email already exists. Please login instead."
+        });
+      }
+
+      // 2️⃣ Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const userRole = role || "customer";
+
+      // 3️⃣ Insert new user
+      const insertSql =
+        "INSERT INTO users (full_name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)";
+
+      db.query(
+        insertSql,
+        [fullName, email, phone, hashedPassword, userRole],
+        (err, result) => {
+          if (err) {
+            console.error("Insert error:", err);
+            return res.status(500).json({ message: "Error creating account" });
+          }
+
+          res.status(201).json({
+            message: "Account created successfully!",
+            role: userRole
+          });
+        }
+      );
     });
+
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
