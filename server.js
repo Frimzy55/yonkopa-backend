@@ -5,7 +5,7 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';   // ✅ ADD THIS
-import kycRoutes from "./routes/kycRoutes.js";
+//import kycRoutes from "./routes/kycRoutes.js";
 //import loanRoutes from "./routes/loanRoutes.js";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -226,7 +226,7 @@ app.get('/loan/management', authenticateToken, authorizeRoles('loan_officer', 'a
 
 app.use("/uploads", express.static("uploads"));
 
-app.use("/api/kyc", kycRoutes);
+//app.use("/api/kyc", kycRoutes);
 
 //app.use("/api/loan", loanRoutes);
 
