@@ -82,7 +82,6 @@ db.getConnection((err, connection) => {
   }
 });
 
-
 // --- SIGNUP customer ENDPOINT ---
 app.post('/signup', async (req, res) => {
   const { fullName, email, phone, password, confirmPassword, role } = req.body;
@@ -92,25 +91,31 @@ app.post('/signup', async (req, res) => {
   }
 
   try {
+    // 1️⃣ Check if email or phone already exists
+    const checkUserSql = "SELECT * FROM users WHERE email = ? OR phone = ?";
 
-    // 1️⃣ Check if email already exists
-    const checkUserSql = "SELECT * FROM users WHERE email = ?";
-
-    db.query(checkUserSql, [email], async (err, results) => {
+    db.query(checkUserSql, [email, phone], async (err, results) => {
       if (err) {
         console.error("Database error:", err);
         return res.status(500).json({ message: "Database error" });
       }
 
       if (results.length > 0) {
-        return res.status(400).json({
-          message: "Email already exists. Please login instead."
-        });
+        // Check which field already exists
+        const existingUser = results[0];
+        if (existingUser.email === email) {
+          return res.status(400).json({
+            message: "Email already exists. Please login instead."
+          });
+        } else if (existingUser.phone === phone) {
+          return res.status(400).json({
+            message: "Phone number already exists. Please use another."
+          });
+        }
       }
 
       // 2️⃣ Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
-
       const userRole = role || "customer";
 
       // 3️⃣ Insert new user
@@ -139,8 +144,6 @@ app.post('/signup', async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
-
 
 // Signup admin endpoint
 app.post('/signup1', async (req, res) => {
