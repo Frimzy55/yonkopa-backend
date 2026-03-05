@@ -7,9 +7,18 @@ import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';   // ✅ ADD THIS
 import kycRoutes from "./routes/kycRoutes.js";
 //import loanRoutes from "./routes/loanRoutes.js";
+import path from "path";
+import { fileURLToPath } from "url";
+import multer from "multer";
 
 // ✅ Load environment variables
 dotenv.config();
+
+
+
+// ✅ Create __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -23,6 +32,8 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.json());
 
+
+
 // ✅ MySQL Connection using env variables
 /*const db = mysql.createConnection({
   host: process.env.DB_HOST,
@@ -33,6 +44,13 @@ app.use(express.json());
   
   
 });*/
+
+
+
+// ✅ Middleware
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 
 const db = mysql.createPool({
@@ -570,6 +588,86 @@ app.post('/api/collateral/save', (req, res) => {
     res.json({ message: 'Collateral saved successfully', result });
   });
 });
+
+
+
+
+
+
+
+
+
+// ✅ Multer setup for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, "uploads/"),
+  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname)
+});
+const upload = multer({ storage });
+
+// ✅ KYC submission endpoint
+app.post(
+  "/kyc/submit",
+  upload.fields([
+    { name: "idDocument", maxCount: 1 },
+    { name: "addressProof", maxCount: 1 },
+    { name: "incomeProof", maxCount: 1 }
+  ]),
+  (req, res) => {
+    const data = req.body;
+    const files = req.files;
+
+    const sql = `
+      INSERT INTO customers_kyc (
+        firstName, middleName, lastName, dateOfBirth, gender, nationality,
+        maritalStatus, nationalId, passportNumber, taxId, mobileNumber,
+        email, residentialAddress, city, state, zipCode, postalAddress,
+        employmentStatus, employerName, jobTitle, monthlyIncome,
+        businessType, yearsInCurrentEmployment, bankName, bankAccountNumber,
+        accountType, branch, loanPurpose, existingLoans,
+        idDocument, addressProof, incomeProof
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `;
+
+    const values = [
+      data.firstName, data.middleName, data.lastName, data.dateOfBirth, data.gender,
+      data.nationality, data.maritalStatus, data.nationalId, data.passportNumber, data.taxId,
+      data.mobileNumber, data.email, data.residentialAddress, data.city, data.state,
+      data.zipCode, data.postalAddress, data.employmentStatus, data.employerName,
+      data.jobTitle, data.monthlyIncome, data.businessType, data.yearsInCurrentEmployment,
+      data.bankName, data.bankAccountNumber, data.accountType, data.branch,
+      data.loanPurpose, data.existingLoans,
+      files?.idDocument?.[0]?.filename || null,
+      files?.addressProof?.[0]?.filename || null,
+      files?.incomeProof?.[0]?.filename || null
+    ];
+
+    db.query(sql, values, (err, result) => {
+      if (err) {
+        console.error("Database insert error:", err);
+        return res.status(500).json({ message: "Database error", error: err });
+      }
+
+      // Generate KYC code
+      const kycCode = String(result.insertId).padStart(5, "0");
+
+      // Update KYC code
+      const updateSql = `UPDATE customers_kyc SET kyc_code = ? WHERE id = ?`;
+      db.query(updateSql, [kycCode, result.insertId], (err2) => {
+        if (err2) {
+          console.error("Error updating KYC code:", err2);
+          return res.status(500).json({ message: "Failed to update KYC code" });
+        }
+
+        return res.json({
+          message: "KYC submitted successfully!",
+          id: result.insertId,
+          kycCode
+        });
+      });
+    });
+  }
+);
+
 
 
 
