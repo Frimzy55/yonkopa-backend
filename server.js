@@ -24,7 +24,7 @@ app.use(bodyParser.json());
 app.use(express.json());
 
 // ✅ MySQL Connection using env variables
-const db = mysql.createConnection({
+/*const db = mysql.createConnection({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
@@ -32,13 +32,36 @@ const db = mysql.createConnection({
   port: process.env.DB_PORT,
   
   
+});*/
+
+
+const db = mysql.createPool({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  port: process.env.DB_PORT,
+
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
 //const db = mysql.createConnection(process.env.MYSQL_URL);
 
-db.connect(err => {
+/*db.connect(err => {
   if (err) console.error('❌ Database connection failed :', err);
   else console.log('✅ Connected to MySQL database');
+});*/
+
+
+db.getConnection((err, connection) => {
+  if (err) {
+    console.error("❌ Database connection failed:", err);
+  } else {
+    console.log("✅ Connected to MySQL database");
+    connection.release();
+  }
 });
 
 
