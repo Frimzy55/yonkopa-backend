@@ -642,7 +642,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // ✅ KYC submission endpoint
-app.post(
+/*app.post(
   "/kyc/submit",
   upload.fields([
     { name: "idDocument", maxCount: 1 },
@@ -707,7 +707,97 @@ app.post(
 
 
 
+*/
 
+
+
+
+app.post(
+  "/kyc/submit",
+  upload.fields([
+    { name: "idDocument", maxCount: 1 },
+    { name: "addressProof", maxCount: 1 },
+    { name: "incomeProof", maxCount: 1 }
+  ]),
+  (req, res) => {
+    const data = req.body;
+    const files = req.files;
+
+    // Validate National ID format: GHA-123456789-0
+    const nationalIdPattern = /^GHA-\d{9}-\d$/;
+    if (!nationalIdPattern.test(data.nationalId)) {
+      return res.status(400).json({
+        message: "National ID must be in the format GHA-123456789-0"
+      });
+    }
+
+    // Check for duplicate national ID
+    const checkSql = "SELECT id FROM customers_kyc WHERE nationalId = ?";
+    db.query(checkSql, [data.nationalId], (err, results) => {
+      if (err) {
+        console.error("Database query error:", err);
+        return res.status(500).json({ message: "Server error" });
+      }
+
+      if (results.length > 0) {
+        return res.status(400).json({
+          message: "National ID already exists in the database"
+        });
+      }
+
+      // Insert KYC data
+      const sql = `
+        INSERT INTO customers_kyc (
+          firstName, middleName, lastName, dateOfBirth, gender, nationality,
+          maritalStatus, nationalId, passportNumber, taxId, mobileNumber,
+          email, residentialAddress, city, state, zipCode, postalAddress,
+          employmentStatus, employerName, jobTitle, monthlyIncome,
+          businessType, yearsInCurrentEmployment, bankName, bankAccountNumber,
+          accountType, branch, loanPurpose, existingLoans,
+          idDocument, addressProof, incomeProof
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      `;
+
+      const values = [
+        data.firstName, data.middleName, data.lastName, data.dateOfBirth, data.gender,
+        data.nationality, data.maritalStatus, data.nationalId, data.passportNumber, data.taxId,
+        data.mobileNumber, data.email, data.residentialAddress, data.city, data.state,
+        data.zipCode, data.postalAddress, data.employmentStatus, data.employerName,
+        data.jobTitle, data.monthlyIncome, data.businessType, data.yearsInCurrentEmployment,
+        data.bankName, data.bankAccountNumber, data.accountType, data.branch,
+        data.loanPurpose, data.existingLoans,
+        files?.idDocument?.[0]?.filename || null,
+        files?.addressProof?.[0]?.filename || null,
+        files?.incomeProof?.[0]?.filename || null
+      ];
+
+      db.query(sql, values, (err2, result) => {
+        if (err2) {
+          console.error("Database insert error:", err2);
+          return res.status(500).json({ message: "Database error", error: err2 });
+        }
+
+        // Generate KYC code
+        const kycCode = String(result.insertId).padStart(5, "0");
+
+        // Update KYC code
+        const updateSql = `UPDATE customers_kyc SET kyc_code = ? WHERE id = ?`;
+        db.query(updateSql, [kycCode, result.insertId], (err3) => {
+          if (err3) {
+            console.error("Error updating KYC code:", err3);
+            return res.status(500).json({ message: "Failed to update KYC code" });
+          }
+
+          return res.json({
+            message: "KYC submitted successfully!",
+            id: result.insertId,
+            kycCode
+          });
+        });
+      });
+    });
+  }
+);
 
 
 
