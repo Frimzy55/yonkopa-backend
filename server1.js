@@ -18,6 +18,8 @@ const JWT_SECRET = 'your_jwt_secret_key_here';
 app.use(cors());
 app.use(bodyParser.json());
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 // MySQL Connection
 const db = mysql.createConnection({
   host: 'localhost',
@@ -33,6 +35,71 @@ db.connect(err => {
 
 
 
+
+
+
+
+// Multer setup for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, './uploads/');
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+const upload = multer({ storage });
+
+// Create uploads folder if it doesn't exist
+import fs from 'fs';
+if (!fs.existsSync('./uploads')) fs.mkdirSync('./uploads');
+
+// KYC submit route
+app.post('/api/kyc/submit', upload.fields([
+  { name: 'idDocument', maxCount: 1 },
+  { name: 'addressProof', maxCount: 1 },
+  { name: 'incomeProof', maxCount: 1 }
+]), (req, res) => {
+  try {
+    const data = req.body;
+    const files = req.files;
+
+    const query = `
+      INSERT INTO kyc_submissions (
+        firstName, middleName, lastName, dateOfBirth, gender, nationality,
+        maritalStatus, nationalId, passportNumber, taxId, mobileNumber, email,
+        residentialAddress, city, state, zipCode, postalAddress,
+        employmentStatus, employerName, jobTitle, monthlyIncome, businessType, yearsInCurrentEmployment,
+        bankName, bankAccountNumber, accountType, branch, loanPurpose, existingLoans,
+        idDocument, addressProof, incomeProof
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `;
+
+    const values = [
+      data.firstName, data.middleName, data.lastName, data.dateOfBirth, data.gender, data.nationality,
+      data.maritalStatus, data.nationalId, data.passportNumber, data.taxId, data.mobileNumber, data.email,
+      data.residentialAddress, data.city, data.state, data.zipCode, data.postalAddress,
+      data.employmentStatus, data.employerName, data.jobTitle, data.monthlyIncome, data.businessType, data.yearsInCurrentEmployment,
+      data.bankName, data.bankAccountNumber, data.accountType, data.branch, data.loanPurpose, data.existingLoans,
+      files.idDocument ? files.idDocument[0].filename : null,
+      files.addressProof ? files.addressProof[0].filename : null,
+      files.incomeProof ? files.incomeProof[0].filename : null
+    ];
+
+    db.query(query, values, (err, result) => {
+      if (err) {
+        console.error('Database insert error:', err);
+        return res.status(500).json({ success: false, message: 'Database error', error: err });
+      }
+      res.json({ success: true, message: 'KYC submitted successfully', id: result.insertId });
+    });
+
+  } catch (error) {
+    console.error('KYC submit error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error });
+  }
+});
 
 
 

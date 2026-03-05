@@ -6,7 +6,7 @@ import bodyParser from 'body-parser';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';   // ✅ ADD THIS
 import kycRoutes from "./routes/kycRoutes.js";
-import loanRoutes from "./routes/loanRoutes.js";
+//import loanRoutes from "./routes/loanRoutes.js";
 
 // ✅ Load environment variables
 dotenv.config();
@@ -430,7 +430,7 @@ app.get('/api/loan-applications/pending', (req, res) => {
 
 app.use("/uploads", express.static("uploads"));
 
-app.use("/api/kyc", kycRoutes);
+//app.use("/api/kyc", kycRoutes);
 
 //app.use("/api/loan", loanRoutes);
 
