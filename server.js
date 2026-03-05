@@ -174,11 +174,13 @@ app.post('/signup1', async (req, res) => {
 
 
 // --- LOGIN ENDPOINT ---
+// --- LOGIN ENDPOINT ---
 app.post('/login', (req, res) => {
-  const { email, password } = req.body;
+  const { identifier, password } = req.body; // identifier can be email or phone
 
-  const sql = 'SELECT * FROM users WHERE email = ?';
-  db.query(sql, [email], async (err, results) => {
+  // SQL: check if either email or phone matches
+  const sql = 'SELECT * FROM users WHERE email = ? OR phone = ?';
+  db.query(sql, [identifier, identifier], async (err, results) => {
     if (err) {
       console.error('Database error:', err);
       return res.status(500).json({ message: 'Server error' });
@@ -207,6 +209,7 @@ app.post('/login', (req, res) => {
         id: user.id,
         fullName: user.full_name,
         email: user.email,
+        phone: user.phone,
         role: user.role
       }
     });
