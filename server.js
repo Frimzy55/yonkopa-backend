@@ -302,7 +302,8 @@ app.post("/api/verify-customer", (req, res) => {
       lastName,
       email,
       mobileNumber,
-      dateOfBirth
+      dateOfBirth,
+      nationalId
     FROM customers_kyc
     WHERE mobileNumber = ? AND kyc_code = ?
   `;
