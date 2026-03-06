@@ -802,6 +802,56 @@ app.post(
 
 
 
+
+
+
+
+
+
+
+// ===== Submit All Steps Endpoint =====
+app.post("/api/applications/submit-all", async (req, res) => {
+  const data = req.body;
+
+  try {
+    const sql = `
+      INSERT INTO credit_applications
+      (loan_id, customer_id, applicant_name, contact_number, credit_officer, loan_type, loan_amount, application_date,
+       lending_type, collateral_type, collateral_details, credit_score, existing_loans, remarks,
+       internal_comment, external_comment, decision)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const values = [
+      data.loanId,
+      data.customerId,
+      data.applicantName,
+      data.contactNumber,
+      data.creditOfficer,
+      data.loanType,
+      data.loanAmount,
+      data.applicationDate,
+      data.lendingType || null,
+      data.collateralType || null,
+      JSON.stringify(data.details || {}), // store collateral details as JSON
+      data.creditScore || null,
+      data.existingLoans || null,
+      data.remarks || null,
+      data.internalComment || null,
+      data.externalComment || null,
+      data.decision || null
+    ];
+
+    const [result] = await pool.execute(sql, values);
+
+    res.json({ success: true, message: "Application submitted successfully", id: result.insertId });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+});
+
+
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
