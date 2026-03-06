@@ -863,7 +863,7 @@ app.post(
 
 app.post("/api/applications/submit-all", (req, res) => {
   const data = req.body;
-  const bc = data.borrowerCredit || {};
+  //const bc = data.borrowerCredit || {};
 
   const sql = `
     INSERT INTO borrower_credit_assessment (
@@ -912,40 +912,40 @@ app.post("/api/applications/submit-all", (req, res) => {
     data.collateralType || null,
     JSON.stringify(data.details || {}),
 
-    bc.isCreditworthy || false,
-    bc.businessOverview || null,
-    bc.businessLocation || null,
-    bc.businessStartDate || null,
-    bc.nearestLandmark || null,
-    bc.businessDescription || null,
+    data.isCreditworthy || false,
+    data.businessOverview || null,
+    data.businessLocation || null,
+    data.businessStartDate || null,
+    data.nearestLandmark || null,
+    data.businessDescription || null,
 
-    bc.isAbleToPay || false,
+    data.isAbleToPay || false,
 
-    bc.currentStockValue || 0,
-    bc.startedBusinessWith || 0,
-    bc.sourceOfFund || null,
+    data.currentStockValue || 0,
+    data.startedBusinessWith || 0,
+    data.sourceOfFund || null,
 
-    bc.principal || 0,
-    bc.rate || 0,
-    bc.loanTerm || 0,
-    bc.interest || 0,
-    bc.monthlyInstallment || 0,
+    data.principal || 0,
+    data.rate || 0,
+    data.loanTerm || 0,
+    data.interest || 0,
+    data.monthlyInstallment || 0,
 
-    bc.grossMarginPercentage || 0,
-    bc.monthlySalesRevenue || 0,
-    bc.costOfGoodsSold || 0,
-    bc.grossProfit || 0,
+    data.grossMarginPercentage || 0,
+    data.monthlySalesRevenue || 0,
+    data.costOfGoodsSold || 0,
+    data.grossProfit || 0,
 
-    bc.totalOperatingExpenses || 0,
-    bc.netBusinessProfit || 0,
+    data.totalOperatingExpenses || 0,
+    data.netBusinessProfit || 0,
 
-    bc.householdExpenses || 0,
-    bc.otherIncome || 0,
-    bc.householdSurplus || 0,
+    data.householdExpenses || 0,
+    data.otherIncome || 0,
+    data.householdSurplus || 0,
 
-    bc.loanRecommendation || 0,
-    bc.expectedMonthlyInstallment || 0,
-    bc.allowableDisposableLoanService || 0,
+    data.loanRecommendation || 0,
+    data.expectedMonthlyInstallment || 0,
+    data.allowableDisposableLoanService || 0,
 
     data.internalComment || null,
     data.externalComment || null,
