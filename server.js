@@ -812,7 +812,7 @@ app.post(
 
 // ===== Submit All Steps Endpoint =====
 // ===== Submit All Steps =====
-app.post("/api/applications/submit-all", (req, res) => {
+/*app.post("/api/applications/submit-all", (req, res) => {
   const data = req.body;
 
   const sql = `
@@ -854,6 +854,118 @@ app.post("/api/applications/submit-all", (req, res) => {
       success: true,
       message: "Application submitted successfully",
       id: result.insertId,
+    });
+  });
+}); */
+
+
+
+
+app.post("/api/applications/submit-all", (req, res) => {
+  const data = req.body;
+  const bc = data.borrowerCredit || {};
+
+  const sql = `
+    INSERT INTO borrower_credit_assessment (
+      loan_id, customer_id, applicant_name, contact_number, credit_officer,
+      loan_type, loan_amount, application_date,
+
+      lending_type, collateral_type, collateral_details,
+
+      is_creditworthy, business_overview, business_location,
+      business_start_date, nearest_landmark, business_description,
+
+      is_able_to_pay,
+
+      current_stock_value, started_business_with, source_of_fund,
+
+      principal, rate, loan_term,
+      interest, monthly_installment,
+
+      gross_margin_percentage, monthly_sales_revenue,
+      cost_of_goods_sold, gross_profit,
+
+      total_operating_expenses, net_business_profit,
+
+      household_expenses, other_income, household_surplus,
+
+      loan_recommendation,
+      expected_monthly_installment,
+      allowable_disposable_loan_service,
+
+      internal_comment, external_comment, decision
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  const values = [
+    data.loanId,
+    data.customerId,
+    data.applicantName,
+    data.contactNumber,
+    data.creditOfficer,
+    data.loanType,
+    data.loanAmount ? Number(data.loanAmount) : null,
+    data.applicationDate,
+
+    data.lendingType || null,
+    data.collateralType || null,
+    JSON.stringify(data.details || {}),
+
+    bc.isCreditworthy || false,
+    bc.businessOverview || null,
+    bc.businessLocation || null,
+    bc.businessStartDate || null,
+    bc.nearestLandmark || null,
+    bc.businessDescription || null,
+
+    bc.isAbleToPay || false,
+
+    bc.currentStockValue || 0,
+    bc.startedBusinessWith || 0,
+    bc.sourceOfFund || null,
+
+    bc.principal || 0,
+    bc.rate || 0,
+    bc.loanTerm || 0,
+    bc.interest || 0,
+    bc.monthlyInstallment || 0,
+
+    bc.grossMarginPercentage || 0,
+    bc.monthlySalesRevenue || 0,
+    bc.costOfGoodsSold || 0,
+    bc.grossProfit || 0,
+
+    bc.totalOperatingExpenses || 0,
+    bc.netBusinessProfit || 0,
+
+    bc.householdExpenses || 0,
+    bc.otherIncome || 0,
+    bc.householdSurplus || 0,
+
+    bc.loanRecommendation || 0,
+    bc.expectedMonthlyInstallment || 0,
+    bc.allowableDisposableLoanService || 0,
+
+    data.internalComment || null,
+    data.externalComment || null,
+    data.decision || "pending",
+  ];
+
+  db.query(sql, values, (err, result) => {
+    if (err) {
+      console.error("Database insert error:", err);
+      return res.status(500).json({
+        success: false,
+        message: "Database error",
+        error: err
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Application submitted successfully",
+      id: result.insertId
     });
   });
 });
