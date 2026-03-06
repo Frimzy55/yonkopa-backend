@@ -830,7 +830,8 @@ app.post("/api/applications/submit-all", (req, res) => {
     data.contactNumber,
     data.creditOfficer,
     data.loanType,
-    data.loanAmount,
+    //data.loanAmount,
+    data.loanAmount ? Number(data.loanAmount) : null, // convert to number or null
     data.applicationDate,
     data.lendingType || null,
     data.collateralType || null,
