@@ -10,6 +10,7 @@ import dotenv from 'dotenv';   // ✅ ADD THIS
 import path from "path";
 import { fileURLToPath } from "url";
 import multer from "multer";
+import { connect } from 'http2';
 
 // ✅ Load environment variables
 dotenv.config();
@@ -810,45 +811,50 @@ app.post(
 
 
 // ===== Submit All Steps Endpoint =====
-app.post("/api/applications/submit-all", async (req, res) => {
+// ===== Submit All Steps =====
+app.post("/api/applications/submit-all", (req, res) => {
   const data = req.body;
 
-  try {
-    const sql = `
-      INSERT INTO credit_applications
-      (loan_id, customer_id, applicant_name, contact_number, credit_officer, loan_type, loan_amount, application_date,
-       lending_type, collateral_type, collateral_details, credit_score, existing_loans, remarks,
-       internal_comment, external_comment, decision)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+  const sql = `
+    INSERT INTO credit_applications
+    (loan_id, customer_id, applicant_name, contact_number, credit_officer, loan_type, loan_amount, application_date,
+     lending_type, collateral_type, collateral_details, credit_score, existing_loans, remarks,
+     internal_comment, external_comment, decision)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
 
-    const values = [
-      data.loanId,
-      data.customerId,
-      data.applicantName,
-      data.contactNumber,
-      data.creditOfficer,
-      data.loanType,
-      data.loanAmount,
-      data.applicationDate,
-      data.lendingType || null,
-      data.collateralType || null,
-      JSON.stringify(data.details || {}), // store collateral details as JSON
-      data.creditScore || null,
-      data.existingLoans || null,
-      data.remarks || null,
-      data.internalComment || null,
-      data.externalComment || null,
-      data.decision || null
-    ];
+  const values = [
+    data.loanId,
+    data.customerId,
+    data.applicantName,
+    data.contactNumber,
+    data.creditOfficer,
+    data.loanType,
+    data.loanAmount,
+    data.applicationDate,
+    data.lendingType || null,
+    data.collateralType || null,
+    JSON.stringify(data.details || {}), // collateral details
+    data.creditScore || null,
+    data.existingLoans || null,
+    data.remarks || null,
+    data.internalComment || null,
+    data.externalComment || null,
+    data.decision || null,
+  ];
 
-    const [result] = await pool.execute(sql, values);
+  db.query(sql, values, (err, result) => {
+    if (err) {
+      console.error("Database insert error:", err);
+      return res.status(500).json({ success: false, message: "Database error", error: err });
+    }
 
-    res.json({ success: true, message: "Application submitted successfully", id: result.insertId });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
-  }
+    res.json({
+      success: true,
+      message: "Application submitted successfully",
+      id: result.insertId,
+    });
+  });
 });
 
 
