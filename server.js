@@ -431,25 +431,31 @@ app.get("/userss", (req, res) => {
 
 
 
-app.get("/api/customers/search", (req, res) => {
+// Search endpoint
+app.get("/api/customers/search", async (req, res) => {
   const { q } = req.query;
 
-  const sql = `
-    SELECT * FROM users 
-    WHERE role = 'customer'
-    AND (
-      full_name LIKE ? 
-      OR phone LIKE ? 
-      OR id LIKE ?
-    )
-  `;
+  if (!q || q.trim() === "") {
+    return res.status(400).json({ message: "Query is required" });
+  }
 
-  const param = `%${q}%`;
+  try {
+    const sql = `
+      SELECT id, kyc_code, firstName, middleName, lastName, mobileNumber, email
+      FROM customers_kyc
+      WHERE kyc_code LIKE ? 
+        OR CONCAT(firstName, ' ', middleName, ' ', lastName) LIKE ?
+      LIMIT 50
+    `;
+    const values = [`%${q}%`, `%${q}%`];
 
-  db.query(sql, [param, param, param], (err, results) => {
-    if (err) return res.status(500).json({ error: err });
-    res.json(results);
-  });
+    const [rows] = await pool.execute(sql, values);
+
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 
