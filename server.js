@@ -432,30 +432,31 @@ app.get("/userss", (req, res) => {
 
 
 // Search endpoint
-app.get("/api/customers/search", async (req, res) => {
+app.get("/api/customers/search", (req, res) => {
   const { q } = req.query;
 
   if (!q || q.trim() === "") {
     return res.status(400).json({ message: "Query is required" });
   }
 
-  try {
-    const sql = `
-      SELECT id, kyc_code, firstName, middleName, lastName, mobileNumber, email
-      FROM customers_kyc
-      WHERE kyc_code LIKE ? 
-        OR CONCAT(firstName, ' ', middleName, ' ', lastName) LIKE ?
-      LIMIT 50
-    `;
-    const values = [`%${q}%`, `%${q}%`];
+  const sql = `
+    SELECT id, kyc_code, firstName, middleName, lastName, mobileNumber, email
+    FROM customers_kyc
+    WHERE kyc_code LIKE ? 
+      OR CONCAT(firstName, ' ', middleName, ' ', lastName) LIKE ?
+    LIMIT 50
+  `;
 
-    const [rows] = await db.execute(sql, values);
+  const values = [`%${q}%`, `%${q}%`];
+
+  db.query(sql, values, (err, rows) => {
+    if (err) {
+      console.error("Search error:", err);
+      return res.status(500).json({ message: "Server error" });
+    }
 
     res.json(rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
+  });
 });
 
 
