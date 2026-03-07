@@ -501,6 +501,22 @@ app.use("/uploads", express.static("uploads"));
 
 
 
+// DELETE /api/loans/delete/:id
+app.delete("/api/loans/delete/:id", (req, res) => {
+  const { id } = req.params;
+
+  const sql = "DELETE FROM loans WHERE id = ?";
+  db.query(sql, [id], (err, result) => {
+    if (err) return res.status(500).json({ message: err.message });
+    if (result.affectedRows === 0)
+      return res.status(404).json({ message: "Loan not found" });
+    res.json({ message: "Loan deleted successfully" });
+  });
+});
+
+
+
+
 
 
 app.post("/api/loan/apply-loan", (req, res) => {
