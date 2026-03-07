@@ -449,7 +449,7 @@ app.get("/api/customers/search", async (req, res) => {
     `;
     const values = [`%${q}%`, `%${q}%`];
 
-    const [rows] = await pool.execute(sql, values);
+    const [rows] = await db.execute(sql, values);
 
     res.json(rows);
   } catch (err) {
